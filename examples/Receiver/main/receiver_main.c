@@ -9,7 +9,8 @@
 #include "esp_log.h"
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-
+#include "freertos/task.h"
+#include "esp_task_wdt.h"
 
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 const static char *TAG = "message";
@@ -37,14 +38,14 @@ void app_main(void)
          ESP_LOGI(TAG, "configuration ADC2");
         adc2_config_channel_atten((adc2_channel_t)channel, atten);
     }
-
+    esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(0));
     TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
     TIMERG0.wdt_feed=1;
     TIMERG0.wdt_wprotect=0;
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
     uint32_t delta = 10000 ;
-   float alpha = 0.1;
+   float alpha = 0.01;
    float average_voltage = 0;
     float next = esp_timer_get_time();
     float time;
@@ -85,6 +86,14 @@ void app_main(void)
                 else if(edge_time - prev_time > (T_max * P)){
 
                     ESP_LOGI(TAG, "Resync" );
+
+                    if(bit == 0){
+                    ESP_LOGI(TAG, "falling edge detection at %f",time );
+                    }
+                    else{
+                        ESP_LOGI(TAG, "rising edge detection at %f",time );
+
+                    }
                     prev_time = edge_time;
                 }
 
