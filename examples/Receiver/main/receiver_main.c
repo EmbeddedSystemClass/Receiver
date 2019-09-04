@@ -43,14 +43,22 @@ void app_main(void)
     TIMERG0.wdt_wprotect=0;
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    uint32_t delta = 250 ;
-   
+    uint32_t delta = 10000 ;
+   float alpha = 0.1;
+   float average_voltage = 0;
     float next = esp_timer_get_time();
     float time;
+    float edge_time ;
     uint32_t sample = 0;
     uint32_t last_sample = 0;
     int32_t delta_sample = 0;
     float sleep_duration = 0;
+    int bit ;
+    int last_bit = 0;
+    float prev_time = 0;
+    float T_min = 0.9;
+    float T_max = 1.1;
+    int P = 200000;
     //Continuously sample ADC1
     while (1) {
             if (unit == ADC_UNIT_1) {
@@ -61,15 +69,45 @@ void app_main(void)
                 adc2_get_raw((adc2_channel_t)channel, ADC_WIDTH_BIT_12, &raw);
                 sample = raw;
             }
-        delta_sample = sample - last_sample ;
-        time = esp_timer_get_time();
-        
-        ESP_LOGI(TAG, "time = %f , sample = %u" ,time ,sample);
-        next += delta;
-        last_sample = sample;
-        sleep_duration = next - esp_timer_get_time() ;
-        sleep_duration = ( sleep_duration > 0 ) ? sleep_duration : 0;
-        delay(sleep_duration);
+
+            //delta_sample = sample - last_sample ;
+            time = esp_timer_get_time();
+            average_voltage = alpha * sample + (1 - alpha) * average_voltage;
+            bit = (sample > average_voltage) ? 1 : 0 ;
+            if(bit != last_bit){
+
+                edge_time = esp_timer_get_time();
+                if(edge_time - prev_time < (T_min * P)){
+
+                    ESP_LOGI(TAG, "discarded" );
+                }
+
+                else if(edge_time - prev_time > (T_max * P)){
+
+                    ESP_LOGI(TAG, "Resync" );
+                    prev_time = edge_time;
+                }
+
+                else{
+                    ESP_LOGI(TAG, "correct edge" );
+                    if(bit == 0){
+
+                        ESP_LOGI(TAG, "falling edge detection at %f",time );
+                    }
+
+                    else{
+                        ESP_LOGI(TAG, "rising edge detection at %f",time );
+
+                    }
+                    prev_time = edge_time;
+                }
+            } 
+            last_bit = bit;
+            next += delta;
+            //last_sample = sample;
+            sleep_duration = next - esp_timer_get_time() ;
+            sleep_duration = ( sleep_duration > 0 ) ? sleep_duration : 0;
+            delay(sleep_duration);
         
     }
        
