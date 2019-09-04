@@ -12,8 +12,7 @@
 
 
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
-#define NO_OF_SAMPLES   64          //Multisampling
-const static char *TAG = "err";
+const static char *TAG = "message";
 static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_channel_t channel = ADC_CHANNEL_4;     //GPIO34 if ADC1, GPIO14 if ADC2
 static const adc_atten_t atten = ADC_ATTEN_DB_0;
@@ -22,7 +21,6 @@ static const adc_unit_t unit = ADC_UNIT_1;
 
 void delay(uint32_t delay)
 {
-
     uint64_t start = (uint64_t)esp_timer_get_time();
     uint64_t end = delay + start ;
     while((uint64_t)esp_timer_get_time() < end);
@@ -45,43 +43,34 @@ void app_main(void)
     TIMERG0.wdt_wprotect=0;
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    float delta = 0 ;
-    int NumOfSamples =  100000;
-    int counter = NumOfSamples ;
-    float start = esp_timer_get_time();
+    uint32_t delta = 250 ;
+   
     float next = esp_timer_get_time();
+    float time;
     uint32_t sample = 0;
+    uint32_t last_sample = 0;
+    int32_t delta_sample = 0;
     float sleep_duration = 0;
     //Continuously sample ADC1
     while (1) {
             if (unit == ADC_UNIT_1) {
-                
                 sample = adc1_get_raw((adc1_channel_t)channel);
+
             } else {
-             
                 int raw;
                 adc2_get_raw((adc2_channel_t)channel, ADC_WIDTH_BIT_12, &raw);
                 sample = raw;
             }
-            next += delta;
-            counter = counter - 1;
+        delta_sample = sample - last_sample ;
+        time = esp_timer_get_time();
         
-     /*    if(counter == 0){
-           
-            float duration = esp_timer_get_time() - start ;
-            duration = duration / NumOfSamples;
-            ESP_LOGI(TAG, "duration = %f" , duration);
-            counter = NumOfSamples ;
-            start = esp_timer_get_time();
-        }*/
+        ESP_LOGI(TAG, "time = %f , sample = %u" ,time ,sample);
+        next += delta;
+        last_sample = sample;
         sleep_duration = next - esp_timer_get_time() ;
         sleep_duration = ( sleep_duration > 0 ) ? sleep_duration : 0;
-       // ESP_LOGI(TAG, "sleep_duration = %f" , sleep_duration);
-       //delay(sleep_duration);
-       //delay(100);
+        delay(sleep_duration);
+        
     }
-        //Convert adc_reading to voltage in mV
-        uint32_t voltage = esp_adc_cal_raw_to_voltage(sample, adc_chars);
-        printf("Raw: %d\tVoltage: %dmV\n", sample, voltage);
-        //vTaskDelay(pdMS_TO_TICKS(1000));
+       
 }
