@@ -60,6 +60,8 @@ void app_main(void)
     float T_min = 0.9;
     float T_max = 1.1;
     int P = 200000;
+    uint64_t buffer = 0;
+    int counter = 0 ;
     //Continuously sample ADC1
     while (1) {
             if (unit == ADC_UNIT_1) {
@@ -80,43 +82,57 @@ void app_main(void)
                 edge_time = esp_timer_get_time();
                 if(edge_time - prev_time < (T_min * P)){
 
-                    ESP_LOGI(TAG, "discarded" );
+                    //ESP_LOGI(TAG, "discarded" );
                 }
 
                 else if(edge_time - prev_time > (T_max * P)){
 
-                    ESP_LOGI(TAG, "Resync" );
+                    //ESP_LOGI(TAG, "Resync" );
+                    buffer = 0 ;
+                    counter = 0;
 
                     if(bit == 0){
-                    ESP_LOGI(TAG, "falling edge detection at %f",time );
+                    //ESP_LOGI(TAG, "falling edge detection at %f",time );
+                    buffer = 0;
+                    counter += 1;
                     }
                     else{
-                        ESP_LOGI(TAG, "rising edge detection at %f",time );
+                        //ESP_LOGI(TAG, "rising edge detection at %f",time );
+                        buffer = 1;
+                        counter += 1;
 
                     }
                     prev_time = edge_time;
                 }
 
                 else{
-                    ESP_LOGI(TAG, "correct edge" );
-                    if(bit == 0){
-
-                        ESP_LOGI(TAG, "falling edge detection at %f",time );
+                    //ESP_LOGI(TAG, "correct edge" );
+                    if(bit == 0){ 
+                        counter += 1;
+                        //ESP_LOGI(TAG, "falling edge detection at %f",time );
                     }
 
                     else{
-                        ESP_LOGI(TAG, "rising edge detection at %f",time );
-
+                        //ESP_LOGI(TAG, "rising edge detection at %f",time );
+                        buffer |= (1 << counter);
+                        counter += 1;
                     }
                     prev_time = edge_time;
                 }
             } 
             last_bit = bit;
+            if(counter >= 64){
+                ESP_LOGI(TAG, "the buffer is = %llu", buffer);
+                buffer = 0;
+                counter = 0;
+            }
             next += delta;
             //last_sample = sample;
             sleep_duration = next - esp_timer_get_time() ;
             sleep_duration = ( sleep_duration > 0 ) ? sleep_duration : 0;
             delay(sleep_duration);
+            
+
         
     }
        
