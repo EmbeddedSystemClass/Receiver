@@ -12,7 +12,7 @@
 
 
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
-#define NO_OF_SAMPLES   64          //Multisampling
+//#define NO_OF_SAMPLES   64          //Multisampling
 const static char *TAG = "err";
 static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_channel_t channel = ADC_CHANNEL_4;     //GPIO34 if ADC1, GPIO14 if ADC2
@@ -45,9 +45,9 @@ void app_main(void)
     TIMERG0.wdt_wprotect=0;
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    float delta = 0 ;
-    int NumOfSamples =  100000;
-    int counter = NumOfSamples ;
+    uint32_t delta = 250 ;
+   // int NumOfSamples =  100000;
+   // int counter = NumOfSamples ;
     float start = esp_timer_get_time();
     float next = esp_timer_get_time();
     uint32_t sample = 0;
