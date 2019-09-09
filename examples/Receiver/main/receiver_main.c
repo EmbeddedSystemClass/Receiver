@@ -40,10 +40,10 @@ void delay(uint32_t delay)
     switch(state){
         case 0 :
         P_buffer = (P_buffer << 1) | bit;
-        ESP_LOGI(TAG,"P_buffer = %u " , P_buffer);
+        //ESP_LOGI(TAG,"P_buffer = %u " , P_buffer);
 
         if(P_buffer == 0x99){
-            ESP_LOGI(TAG,"preamble %u= " , P_buffer);
+           // ESP_LOGI(TAG,"preamble  = %u " , P_buffer);
 
             state = 1;
             P_buffer = 0;
@@ -93,7 +93,7 @@ void app_main(void)
 
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    uint32_t delta = 2000 ;
+    uint32_t delta = 500 ;
     float alpha = 0.01;
     float average_voltage = 0;
     float next = esp_timer_get_time();
@@ -102,8 +102,8 @@ void app_main(void)
     float sleep_duration = 0;
     int bit,last_bit = 0;
     float prev_time = 0;
-    float T_min = 0.9;
-    float T_max = 1.1;
+    float T_min = 0.8;
+    float T_max = 1.2;
     int P = 4000;
     //Continuously sample ADC1
     while (1) {
@@ -122,14 +122,23 @@ void app_main(void)
             edge_time = esp_timer_get_time();
             if(edge_time - prev_time < (T_min * P)){
                 /*discarded edge */
+                //ESP_LOGI(TAG, "discard shod");
             }
             else if(edge_time - prev_time > (T_max * P)){
                 /* Resync */
+                
+                state = 0;
+                length = 0;
+                len_count =0;
+                pay_bit_len= 0;
+                pay_bit_count= 0;
+                P_buffer = 0;
                 parse(bit);
                 prev_time = edge_time;
             }
             else{
                 /*correct edge*/
+                
                 parse(bit);
                 prev_time = edge_time;
             }
